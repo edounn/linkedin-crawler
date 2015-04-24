@@ -3,7 +3,7 @@ var casper = require('casper').create({
   // Prints debug information to console
   verbose: true,
   // Only debug level messages are printed
-  logLevel: "debug",
+  logLevel: "info",
   pageSettings: {
     loadImages: true,
     loadPlugins: false,
@@ -21,7 +21,7 @@ var password = '';
 if(casper.cli.has(0) && casper.cli.has(1)) {
   var email = casper.cli.get(0);
   var password = casper.cli.get(1);
-  casper.echo('Login Email = ' + casper.cli.get(0),'GREEN_BAR');
+  casper.echo('Login Email = ' + email,'GREEN_BAR');
   casper.echo('Login password = exists', 'GREEN_BAR');
 }
 
@@ -34,7 +34,7 @@ casper.getImages = function() {
     });
 };
 
-// Logining in to linkedin.com if with command line arguments
+// Logining in to linkedin.com/usa/login-submit
 casper.loginLinkedIn = function(loginEmail, loginPassword) {
   if(this.exists('form#login')){
     this.fillSelectors('form#login', {
@@ -45,14 +45,30 @@ casper.loginLinkedIn = function(loginEmail, loginPassword) {
   else {
     this.echo('LinkedIn login form not found on page', 'ERROR');
   }
+
+  // Looing for identity id which relates to small profile preview on main page
+  this.waitForSelector('#identity', function() {
+    if(this.getTitle() == 'Welcome! | LinkedIn'){
+      this.echo('Successfully logged in to LinkedIn', 'GREEN_BAR');
+    }
+    else {
+      this.echo('Login unsuccessful', 'ERROR');
+    }
+  });
 }
 
 casper.start('http://linkedin.com/');
 
 // login using loginLinkedIn function - Takes user name as password from command line arguments
 casper.then(function() {
-  this.loginLinkedIn(casper.cli.get(0), casper.cli.get(1));
+  this.loginLinkedIn(email, password);
 });
+
+casper.then(function () {
+  this.click('a#advanced-search', function () {
+    
+  })
+})
 
 /* casper.waitForSelector('a#advanced-search', function() {
 
