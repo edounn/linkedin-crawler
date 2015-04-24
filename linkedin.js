@@ -3,63 +3,59 @@ var casper = require('casper').create({
   // Prints debug information to console
   verbose: true,
   // Only debug level messages are printed
-  logLevel: "info",
-  // Don't load any images or javascript plugins to the site
+  logLevel: "debug",
   pageSettings: {
     loadImages: true,
     loadPlugins: false,
   }
 });
 
-// Test profiles
-var fixedProfiles = [
-'https://linkedin.com/in/jacobryoung',
-'https://linkedin.com/in/michaelbyoung',
-'https://linkedin.com/pub/alan-guan/40/a47/56b'
-];
-
-var saveDir = './screenshots/';
 var viewport = [1920, 1080];
+var screenshotsDir = "./screenshots/";
+var profilePictureDir = "./profile-pictures/";
 
-var imagesArray = [];
+var email = '';
+var password = '';
 
-function getImages() {
+// Evaluating if command line arguments exists then setting to login variables
+if(casper.cli.has(0) && casper.cli.has(1)) {
+  var email = casper.cli.get(0);
+  var password = casper.cli.get(1);
+  casper.echo('Login Email = ' + casper.cli.get(0),'GREEN_BAR');
+  casper.echo('Login password = exists', 'GREEN_BAR');
+}
+
+
+// TDOD: Rework and user jQuery and underscope to get the image srcs
+casper.getImages = function() {
     var scripts = document.querySelectorAll('img[src]');
     return Array.prototype.map.call(scripts, function (e) {
         return e.getAttribute('src');
     });
 };
 
-casper.start();
+// Logining in to linkedin.com if with command line arguments
+casper.loginLinkedIn = function(loginEmail, loginPassword) {
+  if(this.exists('form#login')){
+    this.fillSelectors('form#login', {
+      'input#session_key-login': loginEmail,
+      'input#session_password-login': loginPassword
+    }, true);
+  } 
+  else {
+    this.echo('LinkedIn login form not found on page', 'ERROR');
+  }
+}
 
-// Navigate to each profile, take a picture of their profile, then get their profile picture.
-casper.eachThen(fixedProfiles, function(link) {
+casper.start('http://linkedin.com/');
 
-  // Opening the pages
-  this.thenOpen(link.data, function(link) {
-    // Viewport to desired width and height
-    this.viewport(viewport[0], viewport[1]);
-
-    // File name is the directory + the url without https://
-    var fileName = saveDir + link.url.replace(/[^a-zA-Z0-9]/gi, '').replace(/^https?-+/, '') + '.png';
-
-    this.evaluate(getImages);
-
-
-
-
-
-
-    // Take screenshot of page with viewport dimensions
-    this.capture(fileName, {
-      top: 0,
-      left: 0,
-      width: viewport[0],
-      height: viewport[1]
-    });
-
-  });
+// login using loginLinkedIn function - Takes user name as password from command line arguments
+casper.then(function() {
+  this.loginLinkedIn(casper.cli.get(0), casper.cli.get(1));
 });
 
+/* casper.waitForSelector('a#advanced-search', function() {
+
+}) */
 
 casper.run();
