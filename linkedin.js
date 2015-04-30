@@ -95,25 +95,15 @@ casper.waitForSelector('#srp_main_', function() {
 
     // Even though keepFocus is true, the autocomplete widgets do not show up
     this.sendKeys('form#peopleSearchForm input[name=f_CC][type=text]', 'Crunchyroll, Inc.', {keepFocus: true});
-    this.sendKeys('form#peopleSearchForm input[name=f_CC][type=text]', casper.page.event.key.Enter, {keepFocus: true});
 
-    /* 
-    this.evaluate(function triggerKeyDownEvent() {
-      // Triggering event on DOM element
-      // Element might listen to keyUp, keyDown, keyStroke, etc. chcking for those.
-      var e = $.Event('keypress');
-      e.which = 13;
-      e.keyCode = 13;
-      $('form#peopleSearchForm input[name=f_CC][type=text]').trigger(e);
+    // We need to wait for the results dropdown to disply after making AJAX call to server
+    this.waitUntilVisible('.typeahead-results-container>li:nth-child(1)', function() {
+    
+      // Pressing enter adds the search field to a checkbox list which can be used to search
+      this.sendKeys('form#peopleSearchForm input[name=f_CC][type=text]', casper.page.event.key.Enter, {keepFocus: true});      
     });
-    */
-
   });
 });
-
-casper.waitForSelector('input[type=checkbox][name=f_CC]', function() {
-  this.capture('screenshots/entered-search-parameters.png');
-})
 
 casper.then(function() {
   this.click('input[name=submit]');
