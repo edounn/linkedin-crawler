@@ -3,7 +3,7 @@ var casper = require('casper').create({
   // Prints debug information to console
   verbose: true,
   // Only debug level messages are printed
-  logLevel: "info",
+  logLevel: "debug",
   pageSettings: {
     loadImages: true,
     loadPlugins: true,
@@ -45,7 +45,7 @@ casper.getEmployeeProfileLinks = function() {
   }
 };
 
-// Defining fuction to log in to linkedin.com/usa/login-submit
+// Login Function
 casper.loginLinkedIn = function(loginEmail, loginPassword) {
   if(this.exists('form#login')){
     this.fillSelectors('form#login', {
@@ -68,38 +68,55 @@ casper.loginLinkedIn = function(loginEmail, loginPassword) {
   });
 };
 
-// ------
+casper.start('https://linkedin.com/');
 
-casper.start('http://linkedin.com/');
-
-// Call Log In Function
+// Login
 casper.then(function() {
   this.loginLinkedIn(email, password);
 });
 
-casper.then(function() {
-  this.click('a#advanced-search');
-})
-
-// Submit Search for Company Employes
-casper.waitForSelector('#advs', function () {
-
-  this.fillSelectors('form#peopleSearchForm', {
-    'input[name=f_CC]': 'Crunchyroll, Inc.'
-  }, false);
-
-  this.click('form#peopleSearchForm input.submit-advs');
+// Wait for the advacned seatch link to be 
+casper.waitForSelector('#advanced-search', function() {
+  this.click('#advanced-search');
 });
 
-// Get displayed employee links on each page
-// Then navigate to next page
+// Waiting for the advanced search div to be visible to the remote DOM
+casper.waitForSelector('#srp_main_', function() {
+
+  // Click on 'Current Company'
+  this.click('li#adv-facet-CC legend.facet-toggle');
+
+  // Click on 'Add' button
+  this.click('#adv-facet-CC button.add-facet-button');
+
+  // Sending keystrokes using Casper is requried because the HTML form on the advanced search form does not repond to Casper's form submission boolean in 
+  // casper.fill('selector', {'key': 'value'}, submitBoolean)
+  this.then(function() {
+
+    // Even though keepFocus is true, the autocomplete widgets do not show up
+    this.sendKeys('form#peopleSearchForm input[name=f_CC][type=text]', 'Crunchyroll, Inc.', {keepFocus: true});
+    this.sendKeys('form#peopleSearchForm input[name=f_CC][type=text]', casper.page.event.key.Enter, {keepFocus: true});
+
+    /* 
+    this.evaluate(function triggerKeyDownEvent() {
+      // Triggering event on DOM element
+      // Element might listen to keyUp, keyDown, keyStroke, etc. chcking for those.
+      var e = $.Event('keypress');
+      e.which = 13;
+      e.keyCode = 13;
+      $('form#peopleSearchForm input[name=f_CC][type=text]').trigger(e);
+    });
+    */
+
+  });
+});
+
+casper.waitForSelector('input[type=checkbox][name=f_CC]', function() {
+  this.capture('screenshots/entered-search-parameters.png');
+})
+
 casper.then(function() {
-  // While there is another page
-  while(this.exists('li.next a')) {
-    this.echo('Entered while loop', 'GREEN_BAR');
-    this.getEmployeeProfileLinks();
-    //TODO: Click the next button
-  }
-}); 
+  this.click('input[name=submit]');
+})
 
 casper.run();
