@@ -26,6 +26,33 @@ if(casper.cli.has(0) && casper.cli.has(1)) {
   casper.echo('Login password = protected', 'GREEN_BAR');
 }
 
+// http://docs.casperjs.org/en/latest/events-filters.html#remote-message
+casper.on("remote.message", function(msg) {
+  this.echo("Console: " + msg);
+});
+
+// http://docs.casperjs.org/en/latest/events-filters.html#page-error
+casper.on("page.error", function(msg, trace) {
+  this.echo("Error: " + msg);
+    // maybe make it a little fancier with the code from the PhantomJS equivalent
+  });
+
+// http://docs.casperjs.org/en/latest/events-filters.html#resource-error
+casper.on("resource.error", function(resourceError) {
+  this.echo("ResourceError: " + JSON.stringify(resourceError, undefined, 4));
+});
+
+// http://docs.casperjs.org/en/latest/events-filters.html#page-initialized
+casper.on("page.initialized", function(page) {
+    // CasperJS doesn't provide `onResourceTimeout`, so it must be set through 
+    // the PhantomJS means. This is only possible when the page is initialized
+    page.onResourceTimeout = function(request) {
+      console.log('Response Timeout (#' + request.id + '): ' + JSON.stringify(request));
+    };
+  });
+
+// ----------------------------
+
 // TDOD: Rework and user jQuery and underscore to get the image srcs
 casper.getProfilePicture = function() {
   var scripts = document.querySelectorAll('img[src]');
@@ -68,7 +95,10 @@ casper.loginLinkedIn = function(loginEmail, loginPassword) {
   });
 };
 
-casper.start('https://linkedin.com/');
+
+// ----------------------------
+
+casper.start('http://linkedin.com/');
 
 // Login
 casper.then(function() {
@@ -94,19 +124,21 @@ casper.waitForSelector('#srp_main_', function() {
   this.then(function() {
 
     // Even though keepFocus is true, the autocomplete widgets do not show up
-    this.sendKeys('form#peopleSearchForm input[name=f_CC][type=text]', 'Crunchyroll, Inc.', {keepFocus: true});
-
-    // We need to wait for the results dropdown to disply after making AJAX call to server
-    this.waitUntilVisible('.typeahead-results-container>li:nth-child(1)', function() {
-    
-      // Pressing enter adds the search field to a checkbox list which can be used to search
-      this.sendKeys('form#peopleSearchForm input[name=f_CC][type=text]', casper.page.event.key.Enter, {keepFocus: true});      
-    });
+    this.sendKeys('form#peopleSearchForm input[name=f_CC][type=text]', 'Facebook', {keepFocus: true});
+    this.capture('screenshots/expected-search-parameters.png');
+       
   });
+
+  this.then(function() {
+    this.click('input[type=submit][name=submit]');
+  });
+
 });
 
+casper.waitWhileVisible('.loading');
+
 casper.then(function() {
-  this.click('input[name=submit]');
-})
+  this.capture('screenshots/results.png');
+});
 
 casper.run();
