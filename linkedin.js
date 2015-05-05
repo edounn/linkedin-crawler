@@ -1,4 +1,5 @@
-// Creating Casper instance
+// Initializations and Setup
+//-------------------------------------------------------------------------
 var casper = require('casper').create({
   // Prints debug information to console
   verbose: true,
@@ -9,22 +10,22 @@ var casper = require('casper').create({
     loadPlugins: true,
   }
 });
-var profilePictureDir = "./profile-pictures/";
 
-// Login credentials
+// Globals
 var email = '';
 var password = '';
+var profilePictureDirectory = 'profile-pictures/';
 
-// Employee links and profile pictures
-var linkHrefs = [];
-
-// Evaluating if command line arguments exists then setting to login variables
+// Evaluating Command Line Arguments
 if(casper.cli.has(0) && casper.cli.has(1)) {
   var email = casper.cli.get(0);
   var password = casper.cli.get(1);
   casper.echo('Login Email = ' + email,'GREEN_BAR');
   casper.echo('Login password = protected', 'GREEN_BAR');
 }
+
+// Error Handling
+//-------------------------------------------------------------------------
 
 // http://docs.casperjs.org/en/latest/events-filters.html#remote-message
 casper.on("remote.message", function(msg) {
@@ -38,9 +39,12 @@ casper.on("page.error", function(msg, trace) {
   });
 
 // http://docs.casperjs.org/en/latest/events-filters.html#resource-error
+// -- Intentionally Silencing Resource Errors Here --
+/*
 casper.on("resource.error", function(resourceError) {
   this.echo("ResourceError: " + JSON.stringify(resourceError, undefined, 4));
 });
+*/
 
 // http://docs.casperjs.org/en/latest/events-filters.html#page-initialized
 casper.on("page.initialized", function(page) {
@@ -51,26 +55,8 @@ casper.on("page.initialized", function(page) {
     };
   });
 
-// ----------------------------
-
-// TDOD: Rework and user jQuery and underscore to get the image srcs
-casper.getProfilePicture = function() {
-  var scripts = document.querySelectorAll('img[src]');
-  return Array.prototype.map.call(scripts, function (e) {
-    return e.getAttribute('src');
-  });
-};
-
-// Given an array of link tags, return an array of hrefs
-casper.getEmployeeProfileLinks = function() {
-  var tempArray = this.evaluate(function() {
-    return document.querySelectorAll('#results li a');
-  });
-
-  for(var i = 0; i < tempArray.length; i++){
-    this.echo(tempArray[i]);
-  }
-};
+// Custom Functions
+//-------------------------------------------------------------------------
 
 // Login Function
 casper.loginLinkedIn = function(loginEmail, loginPassword) {
@@ -96,49 +82,81 @@ casper.loginLinkedIn = function(loginEmail, loginPassword) {
 };
 
 
-// ----------------------------
+// Returns an array of employee objects
+casper.getUserDataOnPage = function() {
 
-casper.start('http://linkedin.com/');
+  return this.evaluate(function() {
 
-// Login
-casper.then(function() {
+    var tempObjects = [];
+
+    var userNames = $('ol#results li.mod').find('a.title').map(function() { return $(this).text() }).get();
+
+    var userImgSrcs= $('ol#results li.mod').find('img').map(function() { return this.src }).get();
+
+    if(userNames.length === userImgSrcs.length) {
+      for(var i = 0; i < userImgSrcs.length; i++){
+        tempObjects.push({name: userNames[i], img: userImgSrcs[i]}) 
+      }
+    }
+    else {
+      console.log('Mismatch in user/image count');
+      console.log('Names: ' + userNames.length);
+      console.log('Srcs: ' + userImgSrcs.length);
+    }
+
+    return tempObjects;
+  });
+};
+
+// Pagination - uses recursion to click 'Next' after completing getUserDataOnPage()
+
+casper.nextPage = function(empl) {
+
+  this.waitForSelector('ol#results', function() {
+
+    this.echo('Employee list found', 'GREEN_BAR');
+
+    empl.push(this.getUserDataOnPage());
+
+    this.echo(empl, 'GREEN_BAR');
+  });
+
+  this.then(function() {
+   if(this.visible('#results-pagination a[rel=next]')) {
+
+      this.thenClick('#results-pagination a[rel=next]');
+
+      this.wait(3000);
+
+      this.then(this.nextPage());
+    }
+    else {
+      this.echo('END', 'ERROR');
+    };
+  });
+};
+
+// Starting Casper Actions
+//-------------------------------------------------------------------------
+
+casper.start('https://linkedin.com').then(function() {
   this.loginLinkedIn(email, password);
+  email = '';
+  password = '';
 });
 
-// Wait for the advacned seatch link to be 
-casper.waitForSelector('#advanced-search', function() {
-  this.click('#advanced-search');
+// Opening URL to company employee results
+casper.then(function() {
+  this.open('https://www.linkedin.com/vsearch/p?f_CC=167212&trk=rr_connectedness');
 });
-
-// Waiting for the advanced search div to be visible to the remote DOM
-casper.waitForSelector('#srp_main_', function() {
-
-  // Click on 'Current Company'
-  this.click('li#adv-facet-CC legend.facet-toggle');
-
-  // Click on 'Add' button
-  this.click('#adv-facet-CC button.add-facet-button');
-
-  // Sending keystrokes using Casper is requried because the HTML form on the advanced search form does not repond to Casper's form submission boolean in 
-  // casper.fill('selector', {'key': 'value'}, submitBoolean)
-  this.then(function() {
-
-    // Even though keepFocus is true, the autocomplete widgets do not show up
-    this.sendKeys('form#peopleSearchForm input[name=f_CC][type=text]', 'Facebook', {keepFocus: true});
-    this.capture('screenshots/expected-search-parameters.png');
-       
-  });
-
-  this.then(function() {
-    this.click('input[type=submit][name=submit]');
-  });
-
-});
-
-casper.waitWhileVisible('.loading');
 
 casper.then(function() {
-  this.capture('screenshots/results.png');
+
+  // Stores objects with name and picture
+  var employees = [];
+  var tempThings = this.getUserDataOnPage();
+  this.echo(tempThings);
+  
 });
 
 casper.run();
