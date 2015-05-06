@@ -4,7 +4,7 @@ var casper = require('casper').create({
   // Prints debug information to console
   verbose: true,
   // Only debug level messages are printed
-  logLevel: "debug",
+  logLevel: "info",
   pageSettings: {
     loadImages: true,
     loadPlugins: true,
@@ -28,9 +28,14 @@ if(casper.cli.has(0) && casper.cli.has(1)) {
 //-------------------------------------------------------------------------
 
 // http://docs.casperjs.org/en/latest/events-filters.html#remote-message
+
+// Silencing console errors because linkedin has too god damn many
+
+/*
 casper.on("remote.message", function(msg) {
   this.echo("Console: " + msg);
 });
+*/
 
 // http://docs.casperjs.org/en/latest/events-filters.html#page-error
 casper.on("page.error", function(msg, trace) {
@@ -58,6 +63,10 @@ casper.on("page.initialized", function(page) {
 // Custom Functions
 //-------------------------------------------------------------------------
 
+casper.renderJSON = function(obj) {
+  return this.echo(JSON.stringify(obj, null, '  '));
+};
+
 // Login Function
 casper.loginLinkedIn = function(loginEmail, loginPassword) {
   if(this.exists('form#login')){
@@ -83,57 +92,94 @@ casper.loginLinkedIn = function(loginEmail, loginPassword) {
 
 
 // Returns an array of employee objects
-casper.getUserDataOnPage = function() {
+casper.getUserDataOnPageNonPremium = function() {
 
   return this.evaluate(function() {
 
-    var tempObjects = [];
+    // ONLY FINDING EMPLOYEES WHOSE NAMES ARE VISIBLE TO NON-PREMIUM ACCOUNT (I.E. MINE)
+    var pageUsers = [];
+    var userNames= [];
+    var userImgSrcs = [];
 
-    var userNames = $('ol#results li.mod').find('a.title').map(function() { return $(this).text() }).get();
+    $('ol#results li.mod').map(function() {
+      var name = $(this).find('a.title').text();
+      var imgElement = $(this).find('a>img');
 
-    var userImgSrcs= $('ol#results li.mod').find('img').map(function() { return this.src }).get();
+
+      if((name !== 'LinkedIn Member') && ( $(imgElement).not('ghost'))) {
+        userNames.push(name);
+        userImgSrcs.push($(imgElement).attr('src'));
+      }
+    }).get()
+
+    console.log(userNames.toString());
+    console.log(userImgSrcs.toString());
 
     if(userNames.length === userImgSrcs.length) {
       for(var i = 0; i < userImgSrcs.length; i++){
-        tempObjects.push({name: userNames[i], img: userImgSrcs[i]}) 
+        pageUsers.push({name: userNames[i], img: userImgSrcs[i]}) 
       }
+      return pageUsers;
     }
     else {
       console.log('Mismatch in user/image count');
       console.log('Names: ' + userNames.length);
       console.log('Srcs: ' + userImgSrcs.length);
     }
+  });
+};
 
-    return tempObjects;
+// Returns all employees if the login account has LinkedIn premium
+casper.getUserDataOnPageWithPremium = function(empl) {
+
+  return this.evaluate(function() {
+
+    // RETURNS USERS WITH PREMIUM TURNED ON - ALL
+
+    var userNames = $('ol#results li.mod').find('a.title').map(function() { return $(this).text() }).get();
+
+    var userImgSrcs = $('ol#results li.mod').find('img').map(function() { return this.src }).get();
+    if(userNames.length && userImgSrcs.length) {
+      if(userNames.length === userImgSrcs.length) {
+        for(var i = 0; i < userImgSrcs.length; i++){
+          tempObjects.push({name: userNames[i], img: userImgSrcs[i]}) 
+        }
+        return tempObjects;
+      }
+      else {
+        console.log('Mismatch in user/image count');
+        console.log('Names: ' + userNames.length);
+        console.log('Srcs: ' + userImgSrcs.length);
+      }
+    }
   });
 };
 
 // Pagination - uses recursion to click 'Next' after completing getUserDataOnPage()
 
-casper.nextPage = function(empl) {
+function nextPage (empl, n) {
 
-  this.waitForSelector('ol#results', function() {
+  casper.waitForSelector('ol#results', function() {
 
-    this.echo('Employee list found', 'GREEN_BAR');
+    casper.echo('Page ' + n, 'GREEN_BAR');
 
-    empl.push(this.getUserDataOnPage());
+    // Scraping the page's content for names and image URLS
+    empl.push(casper.getUserDataOnPageNonPremium());
+    this.echo(casper.renderJSON(empl));
 
-    this.echo(empl, 'GREEN_BAR');
-  });
+    if(casper.visible('#results-pagination a[rel=next]')) {
 
-  this.then(function() {
-   if(this.visible('#results-pagination a[rel=next]')) {
-
-      this.thenClick('#results-pagination a[rel=next]');
-
-      this.wait(3000);
-
-      this.then(this.nextPage());
+      casper.echo('Next button present', 'GREEN_BAR');
+      casper.thenClick('#results-pagination a[rel=next]');
+      casper.wait(2000);
+      return nextPage(empl, (n+1));
     }
     else {
-      this.echo('END', 'ERROR');
+      casper.echo('END', 'GREEN_BAR');
+      return empl;
     };
-  });
+
+  }); 
 };
 
 // Starting Casper Actions
@@ -152,10 +198,11 @@ casper.then(function() {
 
 casper.then(function() {
 
-  // Stores objects with name and picture
+  this.echo('Attempting start recursion');
+  // Stores information as JSON whith name: and image: keys
   var employees = [];
-  var tempThings = this.getUserDataOnPage();
-  this.echo(tempThings);
+  employees = nextPage(employees, 1);
+  this.echo('hello', 'GREEN_BAR');
   
 });
 
