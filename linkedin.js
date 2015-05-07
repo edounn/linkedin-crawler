@@ -45,6 +45,14 @@ casper.on("page.initialized", function(page) {
 // Custom Functions
 //-------------------------------------------------------------------------
 
+casper.renderArrayJSON = function(array) {
+  var output = '';
+  array.map(function(user){
+    output += JSON.stringify(user);
+  });
+  return casper.echo(output);
+};
+
 // Login Function
 casper.loginLinkedIn = function(loginEmail, loginPassword) {
   if(this.exists('form#login')){
@@ -93,6 +101,7 @@ function nextPage (aEmpl, n) {
     }
     else {
       casper.echo('END OF RESULTS - DOWNLOADING IMAGES', 'GREEN_BAR');
+      casper.renderArrayJSON(aEmpl);
       casper.downloadPageResults(aEmpl);
     };
   }); 
@@ -147,12 +156,12 @@ casper.downloadPageResults = function(employees) {
     
     var filepath = profilePictureDirectory + 'crucnhyroll' + '-';
 
-    if(user.name == 'Unknown'){
-      filepath.concat(user.name, '-', index, '.png');
+    if(user.name == 'Unknown' || user.name == ''){
+      filepath += 'unkown' + index + '.png';
       casper.echo(filepath);
     }
     else {
-      filepath.concat(user.name, '.png');
+      filepath += user.name + '.png';
       casper.echo(filepath);
     }
     casper.download(user.img, filepath);
