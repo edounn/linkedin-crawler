@@ -5,4 +5,4 @@ To run this crawler, login credentials to LinedIn are required. Pass them in as 
 
 `casperjs linkedin.js loginEmailAddress loginPassword`
 
-Optionally, passing the `--ssl-protocol=tslv1`  or `--web-security=no`flag as an arguemnt helps with the "Unsafe JavaScript attempt to access frame with URL" error which can occur in Phantom 1.9.8. [Reference](https://github.com/n1k0/casperjs/issues/1068)
+Also **required**, are the flags  `--ignore-ssl-errors=true`  and  `--web-security=no` which help with "Unsafe JavaScript attempt to access frame with URL" error which can occur in Phantom 1.9.8. and downloading over https connection. [Reference](https://github.com/n1k0/casperjs/issues/1068)
