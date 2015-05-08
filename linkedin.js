@@ -4,7 +4,7 @@ var casper = require('casper').create({
   // Prints debug information to console
   verbose: true,
   // Only debug level messages are printed
-  logLevel: "info",
+  logLevel: "debug",
   pageSettings: {
     loadImages: true,
     loadPlugins: true,
