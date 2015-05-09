@@ -39,7 +39,7 @@ casper.on("page.initialized", function(page) {
     // the PhantomJS means. This is only possible when the page is initialized
     page.onResourceTimeout = function(request) {
       console.log('Response Timeout (#' + request.id + '): ' + JSON.stringify(request));
-    };
+    }
   });
 
 // Custom Functions
@@ -51,7 +51,7 @@ casper.renderArrayJSON = function(array) {
     output += JSON.stringify(user);
   });
   return casper.echo(output);
-};
+}
 
 // Login Function
 casper.loginLinkedIn = function(loginEmail, loginPassword) {
@@ -74,11 +74,11 @@ casper.loginLinkedIn = function(loginEmail, loginPassword) {
       this.echo('Login unsuccessful', 'ERROR');
     }
   });
-};
+}
 
 // Pagination - uses recursion to click 'Next' after completing getUserDataOnPage()
 
-function nextPage (aEmpl, n) {
+function loopPagination (aEmpl, n) {
 
   casper.waitForSelector('ol#results', function() {
 
@@ -97,15 +97,15 @@ function nextPage (aEmpl, n) {
       casper.echo('Next button present', 'GREEN_BAR');
       casper.thenClick('#results-pagination a[rel=next]');
       casper.wait(2000);
-      nextPage(aEmpl, (n+1));
+      loopPagination(aEmpl, (n+1));
     }
     else {
       casper.echo('END OF RESULTS - DOWNLOADING IMAGES', 'GREEN_BAR');
       casper.renderArrayJSON(aEmpl);
       casper.downloadPageResults(aEmpl);
-    };
+    }
   }); 
-};
+}
 
 // Returns an array of employee objects
 casper.getUserDataOnPageNonPremium = function() {
@@ -147,9 +147,9 @@ casper.getUserDataOnPageNonPremium = function() {
       console.log('Srcs: ' + userImgSrcs.length);
     }
   });
-};
+}
 
-// Arguments: Array of user objects, page number from nextPage function counter
+// Arguments: Array of user objects, page number from loopPagination function counter
 casper.downloadPageResults = function(employees) {
 
   employees.map(function(user, index) {
@@ -166,7 +166,7 @@ casper.downloadPageResults = function(employees) {
     }
     casper.download(user.img, filepath);
   });
-};
+}
 
 // Starting Casper Actions
 //-------------------------------------------------------------------------
@@ -185,7 +185,7 @@ casper.then(function() {
 });
 
 casper.then(function() {
-  nextPage([], 1);
+  loopPagination([], 1);
 });
 
 casper.run();
