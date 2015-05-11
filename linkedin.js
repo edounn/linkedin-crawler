@@ -39,7 +39,7 @@ casper.on("page.initialized", function(page) {
     // the PhantomJS means. This is only possible when the page is initialized
     page.onResourceTimeout = function(request) {
       console.log('Response Timeout (#' + request.id + '): ' + JSON.stringify(request));
-    }
+    };
   });
 
 // Custom Functions
@@ -51,7 +51,7 @@ casper.renderArrayJSON = function(array) {
     output += JSON.stringify(user);
   });
   return casper.echo(output);
-}
+};
 
 // Login Function
 casper.loginLinkedIn = function(loginEmail, loginPassword) {
@@ -74,7 +74,7 @@ casper.loginLinkedIn = function(loginEmail, loginPassword) {
       this.echo('Login unsuccessful', 'ERROR');
     }
   });
-}
+};
 
 // Pagination - uses recursion to click 'Next' after completing getUserDataOnPage()
 
@@ -90,7 +90,7 @@ function loopPagination (aEmpl, n) {
     // Getting objects from within resultsFromPage and adding them to aEmpl
     resultsFromPage.map(function(user) {
       aEmpl.push(user);
-    })
+    });
 
     if(casper.visible('#results-pagination a[rel=next]')) {
 
@@ -129,17 +129,17 @@ casper.getUserDataOnPageNonPremium = function() {
         userNames.push(name);
         userImgSrcs.push($(imgElement).attr('src'));
       }
-    }).get()
+    }).get();
 
     console.log(userNames.toString());
     console.log(userImgSrcs.toString());
 
     if(userNames.length === userImgSrcs.length) {
       for(var i = 0; i < userImgSrcs.length; i++){
-        pageResults.push({name: userNames[i], img: userImgSrcs[i]}) 
+        pageResults.push({name: userNames[i], img: userImgSrcs[i]});
       }
       // Returning an array of employee objects
-      return pageResults
+      return pageResults;
     }
     else {
       console.log('Mismatch in user/image count');
@@ -147,7 +147,7 @@ casper.getUserDataOnPageNonPremium = function() {
       console.log('Srcs: ' + userImgSrcs.length);
     }
   });
-}
+};
 
 // Arguments: Array of user objects, page number from loopPagination function counter
 casper.downloadPageResults = function(employees) {
@@ -156,9 +156,10 @@ casper.downloadPageResults = function(employees) {
     
     var filepath = profilePictureDirectory + 'crucnhyroll' + '-';
 
-    if(user.name == 'Unknown' || user.name == ''){
+    if(user.name === 'Unknown' || user.name === ''){
       filepath += 'unkown' + index + '.png';
       casper.echo(filepath);
+      user.img = "https://static.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_100x100_v1.png";
     }
     else {
       filepath += user.name + '.png';
@@ -166,7 +167,7 @@ casper.downloadPageResults = function(employees) {
     }
     casper.download(user.img, filepath);
   });
-}
+};
 
 // Starting Casper Actions
 //-------------------------------------------------------------------------
